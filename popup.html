@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ThreatShield</title>
+  <link rel="stylesheet" type="text/css" href="popup.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="header-title">ThreatShield</div>
+    </div>
+
+    <!-- URL Input -->
+    <input type="text" id="urlInput" class="input" placeholder="Enter or paste URL to scan...">
+
+    <!-- Scan Button -->
+    <button id="predictButton" class="button">
+      <span id="btnText">Scan URL</span>
+    </button>
+
+    <!-- Scanning Animation -->
+    <div id="scanning" class="scanning">
+      <div class="scan-bar-track">
+        <div class="scan-bar-fill"></div>
+      </div>
+      <div class="scanning-text">Analyzing URL threat vectors...</div>
+    </div>
+
+    <!-- Result Container -->
+    <div id="result" class="result"></div>
+
+    <!-- Scan History -->
+    <div id="historySection" class="history-section">
+      <div class="history-title">Recent Scans</div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <!-- JS must stay external in Manifest V3 -->
+  <script src="popup.js"></script>
+</body>
+</html>

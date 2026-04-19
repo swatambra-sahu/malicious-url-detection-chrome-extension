@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en" class="h-full scroll-smooth">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ThreatShield - URL Threat Detection</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Outfit:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    @keyframes scanLine { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+    @keyframes pulse-glow { 0%,100%{box-shadow:0 0 20px rgba(0,255,136,0.1)} 50%{box-shadow:0 0 40px rgba(0,255,136,0.25)} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes float { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-8px)} }
+    .scan-animation .scan-bar { animation: scanLine 1.2s ease-in-out infinite; }
+    .result-card { animation: fadeUp 0.4s ease-out; }
+    .glow-box { animation: pulse-glow 3s ease-in-out infinite; }
+    .feature-card { transition: all 0.3s ease; }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(0,255,136,0.15); }
+    .hero-text { animation: slideDown 0.6s ease-out; }
+    body { box-sizing: border-box; font-size: 15px; }
+    .auth-input { width:100%; padding:14px 16px; border-radius:12px; outline:none; font-size:15px;
+      background:#111827; color:#e8ecf4; border:1px solid #1e293b; font-family:'Outfit',sans-serif;
+      transition: border-color 0.2s; }
+    .auth-input:focus { border-color:#00ff88; }
+    .auth-input::placeholder { color:#3a4458; }
+    .auth-btn { width:100%; padding:14px; border-radius:12px; font-weight:600; font-size:16px;
+      cursor:pointer; transition:all 0.2s; border:none;
+      background:linear-gradient(135deg,#00ff88,#00cc6a); color:#0a0e17; }
+    .auth-btn:hover { filter:brightness(1.1); transform:translateY(-1px); }
+    .auth-error { color:#ff4757; font-size:13px; margin-top:4px; min-height:18px; }
+    .page { display:none; }
+    .page.active { display:block; }
+    .nav-link { color:#5a6478; background:none; border:none; cursor:pointer; font-size:15px;
+      font-family:'Outfit',sans-serif; transition:color 0.2s; }
+    .nav-link:hover { color:#e8ecf4; }
+    .user-avatar { width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:14px;color:#0a0e17;background:linear-gradient(135deg,#00ff88,#00cc6a); }
+  </style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full">
+  <div id="app" class="h-full w-full overflow-auto" style="background:#0a0e17;font-family:'Outfit',sans-serif;">
+   <!-- Grid overlay -->
+   <div style="position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;"></div>
+
+   <!-- ==================== AUTH PAGE ==================== -->
+   <div id="auth-page" class="page">
+    <div class="relative z-10 min-h-screen flex items-center justify-center px-5 py-12">
+     <div class="w-full max-w-md">
+      <!-- Logo -->
+      <div class="text-center mb-10">
+       <div class="inline-flex items-center gap-3 mb-4">
+        <div class="p-3 rounded-xl" style="background:rgba(0,255,136,0.1);">
+         <i data-lucide="shield-check" style="width:28px;height:28px;color:#00ff88;"></i>
+        </div>
+        <span class="font-bold text-2xl" style="color:#e8ecf4;">ThreatShield</span>
+       </div>
+       <p style="color:#5a6478;font-size:15px;">Protect yourself from malicious URLs</p>
+      </div>
+
+      <!-- Login Form -->
+      <div id="login-form" class="rounded-2xl p-8" style="background:#0d1220;border:1px solid #1e293b;">
+       <h2 class="text-2xl font-bold mb-6" style="color:#e8ecf4;">Welcome back</h2>
+       <div class="space-y-5">
+        <div>
+         <label class="block text-sm font-medium mb-2" style="color:#7a8496;">Email</label>
+         <input id="login-email" type="email" class="auth-input" placeholder="you@example.com">
+         <div id="login-email-err" class="auth-error"></div>
+        </div>
+        <div>
+         <label class="block text-sm font-medium mb-2" style="color:#7a8496;">Password</label>
+         <input id="login-password" type="password" class="auth-input" placeholder="Enter your password">
+         <div id="login-password-err" class="auth-error"></div>
+        </div>
+        <div class="flex items-center justify-between">
+         <label class="flex items-center gap-2 cursor-pointer" style="color:#5a6478;font-size:14px;">
+          <input id="login-remember" type="checkbox" class="accent-green-400 w-4 h-4"> Remember me
+         </label>
+        </div>
+        <button onclick="handleLogin()" class="auth-btn">Sign In</button>
+       </div>
+       <p class="text-center mt-6" style="color:#5a6478;font-size:14px;">
+        Don't have an account? <button onclick="showSignup()" style="color:#00ff88;background:none;border:none;cursor:pointer;font-weight:600;font-size:14px;">Sign up</button>
+       </p>
+      </div>
+
+      <!-- Signup Form -->
+      <div id="signup-form" class="rounded-2xl p-8 hidden" style="background:#0d1220;border:1px solid #1e293b;">
+       <h2 class="text-2xl font-bold mb-6" style="color:#e8ecf4;">Create account</h2>
+       <div class="space-y-5">
+        <div>
+         <label class="block text-sm font-medium mb-2" style="color:#7a8496;">Full Name</label>
+         <input id="signup-name" type="text" class="auth-input" placeholder="John Doe">
+         <div id="signup-name-err" class="auth-error"></div>
+        </div>
+        <div>
+         <label class="block text-sm font-medium mb-2" style="color:#7a8496;">Email</label>
+         <input id="signup-email" type="email" class="auth-input" placeholder="you@example.com">
+         <div id="signup-email-err" class="auth-error"></div>
+        </div>
+        <div>
+         <label class="block text-sm font-medium mb-2" style="color:#7a8496;">Password</label>
+         <input id="signup-password" type="password" class="auth-input" placeholder="Min. 6 characters">
+         <div id="signup-password-err" class="auth-error"></div>
+        </div>
+        <div>
+         <label class="block text-sm font-medium mb-2" style="color:#7a8496;">Confirm Password</label>
+         <input id="signup-confirm" type="password" class="auth-input" placeholder="Re-enter password">
+         <div id="signup-confirm-err" class="auth-error"></div>
+        </div>
+        <button onclick="handleSignup()" class="auth-btn">Create Account</button>
+       </div>
+       <p class="text-center mt-6" style="color:#5a6478;font-size:14px;">
+        Already have an account? <button onclick="showLogin()" style="color:#00ff88;background:none;border:none;cursor:pointer;font-weight:600;font-size:14px;">Sign in</button>
+       </p>
+      </div>
+     </div>
+    </div>
+   </div>
+
+   <!-- ==================== MAIN PAGE ==================== -->
+   <div id="main-page" class="page">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 border-b" style="border-color:#1e293b;background:rgba(10,14,23,0.85);backdrop-filter:blur(12px);">
+     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+       <div class="p-2 rounded-lg" style="background:rgba(0,255,136,0.1);">
+        <i data-lucide="shield-check" style="width:22px;height:22px;color:#00ff88;"></i>
+       </div>
+       <span class="font-bold text-lg" style="color:#e8ecf4;">ThreatShield</span>
+      </div>
+      <div class="hidden md:flex items-center gap-8">
+       <button onclick="smoothScroll('#scanner')" class="nav-link">Scanner</button>
+       <button onclick="smoothScroll('#features')" class="nav-link">Features</button>
+       <button onclick="smoothScroll('#how')" class="nav-link">How It Works</button>
+      </div>
+      <div class="flex items-center gap-4">
+       <div class="hidden sm:flex items-center gap-3">
+        <div id="nav-avatar" class="user-avatar"></div>
+        <span id="nav-user-name" style="color:#c0c8d8;font-size:14px;font-weight:500;"></span>
+       </div>
+       <button onclick="handleLogout()" class="nav-link flex items-center gap-1" style="color:#ff4757;font-size:14px;">
+        <i data-lucide="log-out" style="width:16px;height:16px;"></i> <span class="hidden sm:inline">Logout</span>
+       </button>
+      </div>
+     </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative z-10 max-w-7xl mx-auto px-6 pt-24 pb-16 text-center">
+     <div class="hero-text mb-10">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8" style="background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.15);">
+       <i data-lucide="zap" style="width:14px;height:14px;color:#00ff88;"></i>
+       <span style="color:#00ff88;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;">ADVANCED PROTECTION</span>
+      </div>
+      <h1 id="main-title" class="text-5xl md:text-6xl font-bold mb-5" style="color:#e8ecf4;line-height:1.15;">ThreatShield</h1>
+      <p id="subtitle" class="text-xl md:text-2xl" style="color:#5a6478;max-width:600px;margin:0 auto;">URL Threat Detection</p>
+     </div>
+     <p style="color:#7a8496;font-size:16px;max-width:700px;margin:0 auto;line-height:1.7;">
+      Instantly analyze and detect malicious URLs using machine learning trained on 650K+ labeled samples. Protect yourself from phishing, malware, and credential harvesting attacks.
+     </p>
+    </section>
+
+    <!-- Scanner Section -->
+    <section id="scanner" class="relative z-10 max-w-3xl mx-auto px-6 py-12">
+     <h2 class="text-sm font-semibold uppercase tracking-widest text-center mb-8" style="color:#3a4458;font-family:'JetBrains Mono',monospace;">URL Scanner</h2>
+     <div class="glow-box rounded-2xl p-1 mb-10" style="background:linear-gradient(135deg,rgba(0,255,136,0.12),rgba(0,170,255,0.08));">
+      <div class="flex flex-col gap-4 p-6 rounded-2xl" style="background:#0d1220;">
+       <input id="url-input" type="text" placeholder="https://example.com/suspicious-link"
+         class="w-full px-5 py-5 rounded-xl outline-none" style="background:#111827;color:#e8ecf4;border:1px solid #1e293b;font-family:'JetBrains Mono',monospace;font-size:15px;">
+       <button id="scan-btn" onclick="scanUrl()"
+         class="w-full px-6 py-5 rounded-xl font-semibold text-lg flex items-center justify-center gap-3 transition-all hover:brightness-110"
+         style="background:linear-gradient(135deg,#00ff88,#00cc6a);color:#0a0e17;">
+        <i data-lucide="scan" style="width:20px;height:20px;"></i>
+        <span id="btn-text">Start Scanning</span>
+       </button>
+      </div>
+     </div>
+
+     <!-- Scanning state -->
+     <div id="scanning" class="hidden rounded-2xl p-10 text-center" style="background:#0d1220;border:1px solid #1e293b;">
+      <div class="scan-animation overflow-hidden rounded-full h-2 mb-6" style="background:#111827;">
+       <div class="scan-bar h-full w-1/3 rounded-full" style="background:linear-gradient(90deg,transparent,#00ff88,transparent);"></div>
+      </div>
+      <p style="color:#5a6478;font-size:15px;font-family:'JetBrains Mono',monospace;">Analyzing URL patterns...</p>
+     </div>
+
+     <!-- Results -->
+     <div id="results" class="hidden"></div>
+
+     <!-- History -->
+     <div id="history-section" class="hidden mt-12 pt-8" style="border-top:1px solid #1e293b;">
+      <h3 class="text-xs font-semibold uppercase tracking-widest mb-5" style="color:#3a4458;font-family:'JetBrains Mono',monospace;">Recent Scans</h3>
+      <div id="history-list" class="space-y-3"></div>
+     </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="relative z-10 max-w-7xl mx-auto px-6 py-24 mt-8">
+     <h2 class="text-3xl md:text-4xl font-bold text-center mb-4" style="color:#e8ecf4;">Powerful Detection Capabilities</h2>
+     <p class="text-center mb-14" style="color:#5a6478;font-size:16px;max-width:550px;margin-left:auto;margin-right:auto;">Our multi-layered approach combines ML classification with heuristic analysis for comprehensive protection.</p>
+     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div class="feature-card rounded-xl p-7" style="background:#0d1220;border:1px solid #1e293b;">
+       <div class="p-3 rounded-lg mb-5 inline-block" style="background:rgba(255,71,87,0.1);">
+        <i data-lucide="shield-alert" style="width:24px;height:24px;color:#ff4757;"></i>
+       </div>
+       <h3 class="font-semibold text-lg mb-3" style="color:#e8ecf4;">Phishing Detection</h3>
+       <p style="color:#5a6478;font-size:15px;line-height:1.6;">Identifies impersonation attempts using brand keywords and credential harvesting tactics.</p>
+      </div>
+      <div class="feature-card rounded-xl p-7" style="background:#0d1220;border:1px solid #1e293b;">
+       <div class="p-3 rounded-lg mb-5 inline-block" style="background:rgba(0,255,136,0.1);">
+        <i data-lucide="zap" style="width:24px;height:24px;color:#00ff88;"></i>
+       </div>
+       <h3 class="font-semibold text-lg mb-3" style="color:#e8ecf4;">Malware Detection</h3>
+       <p style="color:#5a6478;font-size:15px;line-height:1.6;">Detects executable downloads, scripts, and suspicious file types embedded in URLs.</p>
+      </div>
+      <div class="feature-card rounded-xl p-7" style="background:#0d1220;border:1px solid #1e293b;">
+       <div class="p-3 rounded-lg mb-5 inline-block" style="background:rgba(255,165,2,0.1);">
+        <i data-lucide="eye" style="width:24px;height:24px;color:#ffa502;"></i>
+       </div>
+       <h3 class="font-semibold text-lg mb-3" style="color:#e8ecf4;">Obfuscation Analysis</h3>
+       <p style="color:#5a6478;font-size:15px;line-height:1.6;">Decodes URL encoding, detects homograph attacks, and identifies redirect tricks.</p>
+      </div>
+      <div class="feature-card rounded-xl p-7" style="background:#0d1220;border:1px solid #1e293b;">
+       <div class="p-3 rounded-lg mb-5 inline-block" style="background:rgba(0,170,255,0.1);">
+        <i data-lucide="globe" style="width:24px;height:24px;color:#00aaff;"></i>
+       </div>
+       <h3 class="font-semibold text-lg mb-3" style="color:#e8ecf4;">Domain Analysis</h3>
+       <p style="color:#5a6478;font-size:15px;line-height:1.6;">Flags suspicious TLDs, IP addresses, and unusual domain structures.</p>
+      </div>
+      <div class="feature-card rounded-xl p-7" style="background:#0d1220;border:1px solid #1e293b;">
+       <div class="p-3 rounded-lg mb-5 inline-block" style="background:rgba(46,213,115,0.1);">
+        <i data-lucide="clock" style="width:24px;height:24px;color:#2ed573;"></i>
+       </div>
+       <h3 class="font-semibold text-lg mb-3" style="color:#e8ecf4;">Real-Time Scanning</h3>
+       <p style="color:#5a6478;font-size:15px;line-height:1.6;">Instant analysis with threat scoring and detailed findings for each detection.</p>
+      </div>
+      <div class="feature-card rounded-xl p-7" style="background:#0d1220;border:1px solid #1e293b;">
+       <div class="p-3 rounded-lg mb-5 inline-block" style="background:rgba(200,124,255,0.1);">
+        <i data-lucide="history" style="width:24px;height:24px;color:#c87cff;"></i>
+       </div>
+       <h3 class="font-semibold text-lg mb-3" style="color:#e8ecf4;">Scan History</h3>
+       <p style="color:#5a6478;font-size:15px;line-height:1.6;">Track your recent scans and quickly re-analyze URLs with one click.</p>
+      </div>
+     </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how" class="relative z-10 max-w-5xl mx-auto px-6 py-24">
+     <h2 class="text-3xl md:text-4xl font-bold text-center mb-4" style="color:#e8ecf4;">How ThreatShield Works</h2>
+     <p class="text-center mb-14" style="color:#5a6478;font-size:16px;max-width:500px;margin-left:auto;margin-right:auto;">Three simple steps to verify any URL before you click.</p>
+     <div class="space-y-8 max-w-2xl mx-auto">
+      <div class="flex gap-6 items-start p-6 rounded-xl" style="background:#0d1220;border:1px solid #1e293b;">
+       <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-lg" style="background:rgba(0,255,136,0.1);color:#00ff88;font-family:'JetBrains Mono',monospace;">1</div>
+       <div>
+        <h3 class="font-semibold text-lg mb-2" style="color:#e8ecf4;">Paste or Type Your URL</h3>
+        <p style="color:#5a6478;font-size:15px;line-height:1.6;">Enter any URL you want to verify into the scanner field above.</p>
+       </div>
+      </div>
+      <div class="flex gap-6 items-start p-6 rounded-xl" style="background:#0d1220;border:1px solid #1e293b;">
+       <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-lg" style="background:rgba(0,255,136,0.1);color:#00ff88;font-family:'JetBrains Mono',monospace;">2</div>
+       <div>
+        <h3 class="font-semibold text-lg mb-2" style="color:#e8ecf4;">ML-Powered Analysis</h3>
+        <p style="color:#5a6478;font-size:15px;line-height:1.6;">Our RandomForest model, trained on 650K+ labeled URLs, extracts 20 features and classifies the URL in real-time.</p>
+       </div>
+      </div>
+      <div class="flex gap-6 items-start p-6 rounded-xl" style="background:#0d1220;border:1px solid #1e293b;">
+       <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-lg" style="background:rgba(0,255,136,0.1);color:#00ff88;font-family:'JetBrains Mono',monospace;">3</div>
+       <div>
+        <h3 class="font-semibold text-lg mb-2" style="color:#e8ecf4;">Get Risk Assessment</h3>
+        <p style="color:#5a6478;font-size:15px;line-height:1.6;">Receive a confidence score, risk level classification (benign, phishing, malware, defacement), and a clear verdict.</p>
+       </div>
+      </div>
+     </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="relative z-10 border-t" style="border-color:#1e293b;background:rgba(10,14,23,0.5);">
+     <div class="max-w-7xl mx-auto px-6 py-12">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+       <div class="flex items-center gap-2">
+        <div class="p-1.5 rounded-lg" style="background:rgba(0,255,136,0.1);">
+         <i data-lucide="shield-check" style="width:16px;height:16px;color:#00ff88;"></i>
+        </div>
+        <span class="font-semibold" style="color:#5a6478;">ThreatShield</span>
+       </div>
+       <p style="color:#3a4458;font-size:14px;">&copy; 2026 ThreatShield. URL Threat Detection &amp; Analysis. All rights reserved.</p>
+      </div>
+     </div>
+    </footer>
+
+   </div><!-- end main-page -->
+  </div>
+
+  <script>
+/* ==================== AUTH LOGIC ==================== */
+function getUser() {
+  try { return JSON.parse(localStorage.getItem('ts_user')); } catch(e) { return null; }
+}
+function setUser(u) { localStorage.setItem('ts_user', JSON.stringify(u)); }
+function clearUser() { localStorage.removeItem('ts_user'); }
+
+function showLogin() {
+  document.getElementById('login-form').classList.remove('hidden');
+  document.getElementById('signup-form').classList.add('hidden');
+  clearAuthErrors();
+}
+function showSignup() {
+  document.getElementById('login-form').classList.add('hidden');
+  document.getElementById('signup-form').classList.remove('hidden');
+  clearAuthErrors();
+}
+function clearAuthErrors() {
+  document.querySelectorAll('.auth-error').forEach(el => el.textContent = '');
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function handleLogin() {
+  clearAuthErrors();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  let valid = true;
+  if (!email) { document.getElementById('login-email-err').textContent = 'Email is required'; valid = false; }
+  else if (!validateEmail(email)) { document.getElementById('login-email-err').textContent = 'Enter a valid email'; valid = false; }
+  if (!password) { document.getElementById('login-password-err').textContent = 'Password is required'; valid = false; }
+  else if (password.length < 6) { document.getElementById('login-password-err').textContent = 'Password must be at least 6 characters'; valid = false; }
+  if (!valid) return;
+  const name = email.split('@')[0];
+  setUser({ name, email });
+  showMainPage();
+}
+
+function handleSignup() {
+  clearAuthErrors();
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const confirm = document.getElementById('signup-confirm').value;
+  let valid = true;
+  if (!name) { document.getElementById('signup-name-err').textContent = 'Name is required'; valid = false; }
+  if (!email) { document.getElementById('signup-email-err').textContent = 'Email is required'; valid = false; }
+  else if (!validateEmail(email)) { document.getElementById('signup-email-err').textContent = 'Enter a valid email'; valid = false; }
+  if (!password) { document.getElementById('signup-password-err').textContent = 'Password is required'; valid = false; }
+  else if (password.length < 6) { document.getElementById('signup-password-err').textContent = 'Min. 6 characters'; valid = false; }
+  if (password && confirm !== password) { document.getElementById('signup-confirm-err').textContent = 'Passwords do not match'; valid = false; }
+  else if (!confirm) { document.getElementById('signup-confirm-err').textContent = 'Confirm your password'; valid = false; }
+  if (!valid) return;
+  setUser({ name, email });
+  showMainPage();
+}
+
+function handleLogout() {
+  clearUser();
+  showAuthPage();
+}
+
+function showAuthPage() {
+  document.getElementById('auth-page').classList.add('active');
+  document.getElementById('main-page').classList.remove('active');
+  showLogin();
+  lucide.createIcons();
+}
+
+function showMainPage() {
+  const user = getUser();
+  if (!user) { showAuthPage(); return; }
+  document.getElementById('auth-page').classList.remove('active');
+  document.getElementById('main-page').classList.add('active');
+  // Update nav user info
+  const initials = user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('nav-avatar').textContent = initials;
+  document.getElementById('nav-user-name').textContent = user.name;
+  lucide.createIcons();
+}
+
+// Enter key on auth forms
+document.addEventListener('DOMContentLoaded', () => {
+  ['login-email','login-password'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+  });
+  ['signup-name','signup-email','signup-password','signup-confirm'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') handleSignup(); });
+  });
+});
+
+/* ==================== NAVIGATION ==================== */
+function smoothScroll(selector) {
+  const el = document.querySelector(selector);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+// Keep backward compat with old scrollTo calls
+function scrollTo(selector) { smoothScroll(selector); }
+
+/* ==================== APP CONFIG ==================== */
+const defaultConfig = {
+  main_title: "ThreatShield",
+  subtitle: "URL Threat Detection",
+  cta_button: "Start Scanning",
+  background_color: "#0a0e17",
+  surface_color: "#0d1220",
+  text_color: "#e8ecf4",
+  primary_action: "#00ff88",
+  secondary_action: "#5a6478"
+};
+
+let history = [];
+
+// Category-to-display mapping for ML predictions
+const categoryDisplay = {
+  benign:      { verdict: "Safe",        color: "#00ff88", icon: "shield-check" },
+  defacement:  { verdict: "Defacement",  color: "#ffa502", icon: "shield-question" },
+  phishing:    { verdict: "Phishing",    color: "#ff4757", icon: "shield-alert" },
+  malware:     { verdict: "Malware",     color: "#ff4757", icon: "shield-alert" }
+};
+
+function getDisplay(predictedClass, confidence) {
+  const d = categoryDisplay[predictedClass] || categoryDisplay.benign;
+  return { verdict: d.verdict, color: d.color, icon: d.icon, score: confidence, predictedClass };
+}
+
+async function scanUrl() {
+  const input = document.getElementById("url-input");
+  const url = input.value.trim();
+  if (!url) return;
+
+  const resultsEl = document.getElementById("results");
+  const scanningEl = document.getElementById("scanning");
+  resultsEl.classList.add("hidden");
+  scanningEl.classList.remove("hidden");
+
+  try {
+    const resp = await fetch("/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+
+    if (!resp.ok) throw new Error("Server returned " + resp.status);
+
+    const data = await resp.json();
+    scanningEl.classList.add("hidden");
+
+    const result = getDisplay(data.predicted_class, data.confidence);
+    renderResult(url, result);
+    addHistory(url, result);
+  } catch (err) {
+    scanningEl.classList.add("hidden");
+    renderError(err.message);
+  }
+}
+
+function renderError(message) {
+  const el = document.getElementById("results");
+  el.innerHTML = `
+    <div class="result-card rounded-2xl p-8" style="background:#0d1220;border:1px solid #ff475730;margin-top:16px;">
+      <div class="flex items-center gap-4 mb-4">
+        <div class="p-4 rounded-xl" style="background:#ff475715;"><i data-lucide="alert-triangle" style="width:32px;height:32px;color:#ff4757;"></i></div>
+        <div>
+          <div class="font-bold text-2xl" style="color:#ff4757;">Analysis Failed</div>
+          <div style="color:#5a6478;font-size:13px;font-family:'JetBrains Mono',monospace;">Could not reach the detection server</div>
+        </div>
+      </div>
+      <div class="rounded-lg p-4" style="background:#111827;border:1px solid #1e293b;">
+        <p style="color:#7a8496;font-size:14px;">Error: ${message}</p>
+        <p style="color:#5a6478;font-size:13px;margin-top:8px;">Please make sure the backend server is running and try again.</p>
+      </div>
+    </div>`;
+  el.classList.remove("hidden");
+  lucide.createIcons();
+}
+
+function renderResult(url, r) {
+  const categoryLabel = r.predictedClass ? r.predictedClass.charAt(0).toUpperCase() + r.predictedClass.slice(1) : "";
+  const isSafe = r.predictedClass === "benign";
+  const el = document.getElementById("results");
+  el.innerHTML = `
+    <div class="result-card rounded-2xl p-8" style="background:#0d1220;border:1px solid ${r.color}30;margin-top:16px;">
+      <div class="flex items-start justify-between mb-6">
+        <div class="flex items-center gap-4">
+          <div class="p-4 rounded-xl" style="background:${r.color}15;"><i data-lucide="${r.icon}" style="width:32px;height:32px;color:${r.color};"></i></div>
+          <div>
+            <div class="font-bold text-2xl" style="color:${r.color};">${r.verdict}</div>
+            <div style="color:#5a6478;font-size:13px;font-family:'JetBrains Mono',monospace;">Confidence: <span style="color:${r.color};font-weight:600;">${r.score}%</span></div>
+          </div>
+        </div>
+        <div class="w-20 h-20 rounded-full flex items-center justify-center font-bold text-3xl" style="border:3px solid ${r.color};color:${r.color};font-family:'JetBrains Mono',monospace;background:${r.color}08;">${r.score}</div>
+      </div>
+      <div class="rounded-lg p-4 mb-6 truncate" style="background:#111827;font-family:'JetBrains Mono',monospace;font-size:13px;color:#7a8496;border:1px solid #1e293b;">${url}</div>
+      <div>
+        <div class="text-xs uppercase tracking-widest font-semibold mb-4" style="color:#3a4458;font-family:'JetBrains Mono',monospace;">ML Classification</div>
+        <div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background:#111827;border:1px solid #1e293b;">
+          <span style="color:#c0c8d8;font-size:14px;">Predicted Category</span>
+          <span style="color:${r.color};background:${r.color}15;border:1px solid ${r.color}30;padding:2px 10px;border-radius:99px;font-size:12px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;font-weight:600;">${categoryLabel}</span>
+        </div>
+      </div>
+      ${isSafe
+        ? '<div style="background:#2ed57315;border:1px solid #2ed57330;padding:16px;border-radius:8px;margin-top:16px;"><p style="color:#2ed573;font-size:14px;font-weight:500;">✓ No threats detected. This URL appears safe to visit.</p></div>'
+        : '<div style="background:#ff475715;border:1px solid #ff475730;padding:16px;border-radius:8px;margin-top:16px;"><p style="color:#ff4757;font-size:14px;font-weight:500;">⚠ This URL has been classified as ' + categoryLabel.toLowerCase() + ' by the ML model. Proceed with caution.</p></div>'}
+    </div>`;
+  el.classList.remove("hidden");
+  lucide.createIcons();
+}
+
+function addHistory(url, r) {
+  history.unshift({ url, verdict: r.verdict, color: r.color, score: r.score });
+  if (history.length > 5) history.pop();
+  const section = document.getElementById("history-section");
+  const list = document.getElementById("history-list");
+  section.classList.remove("hidden");
+  list.innerHTML = history.map(h => `
+    <button onclick="document.getElementById('url-input').value='${h.url.replace(/'/g,"\\'")}';scanUrl();"
+      class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:brightness-125" style="background:#111827;border:1px solid #1e293b;">
+      <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${h.color};"></div>
+      <span class="truncate flex-1" style="color:#7a8496;font-size:13px;font-family:'JetBrains Mono',monospace;">${h.url}</span>
+      <span style="color:${h.color};font-size:13px;font-weight:600;background:${h.color}10;padding:2px 8px;border-radius:4px;">${h.score}</span>
+    </button>
+  `).join("");
+}
+
+/* ==================== INIT ==================== */
+// Check login state on load
+if (getUser()) { showMainPage(); } else { showAuthPage(); }
+
+// Enter key on URL input
+document.getElementById("url-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") scanUrl();
+});
+
+// Element SDK
+window.elementSdk.init({
+  defaultConfig,
+  onConfigChange: async (config) => {
+    const c = { ...defaultConfig, ...config };
+    document.getElementById("main-title").textContent = c.main_title;
+    document.getElementById("subtitle").textContent = c.subtitle;
+    document.getElementById("btn-text").textContent = c.cta_button;
+    document.getElementById("app").style.background = c.background_color;
+    document.getElementById("main-title").style.color = c.text_color;
+    document.getElementById("subtitle").style.color = c.secondary_action;
+    document.getElementById("scan-btn").style.background = `linear-gradient(135deg,${c.primary_action},${c.primary_action}cc)`;
+  },
+  mapToCapabilities: (config) => {
+    const c = { ...defaultConfig, ...config };
+    const mk = (key) => ({
+      get: () => c[key] || defaultConfig[key],
+      set: (v) => { c[key] = v; window.elementSdk.setConfig({ [key]: v }); }
+    });
+    return {
+      recolorables: [mk("background_color"), mk("surface_color"), mk("text_color"), mk("primary_action"), mk("secondary_action")],
+      borderables: [],
+      fontEditable: {
+        get: () => c.font_family || "Outfit",
+        set: (v) => { c.font_family = v; window.elementSdk.setConfig({ font_family: v }); }
+      },
+      fontSizeable: undefined
+    };
+  },
+  mapToEditPanelValues: (config) => {
+    const c = { ...defaultConfig, ...config };
+    return new Map([["main_title", c.main_title], ["subtitle", c.subtitle], ["cta_button", c.cta_button]]);
+  }
+});
+
+lucide.createIcons();
+  </script>
+ </body>
+</html>
