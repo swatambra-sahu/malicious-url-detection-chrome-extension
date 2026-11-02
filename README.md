@@ -317,6 +317,18 @@ fetch("http://127.0.0.1:5000/predict", {...})
 
 ---
 
+## 🎥 Demo Video
+▶ **YouTube Project Walkthrough Playlist:**  
+[https://www.youtube.com/playlist?list=PLQR5HhZbxwzE](https://www.youtube.com/playlist?list=PLQR5HhZbxwzE)
+
+---
+
+## 📂 Project Resources
+📁 **Google Drive (Dataset, Report, Demo):**  
+[https://drive.google.com/drive/u/0/folders/1_5PIzG1zTnB4qIvGPpXIxL8hbdc6vDcl](https://drive.google.com/drive/u/0/folders/1_5PIzG1zTnB4qIvGPpXIxL8hbdc6vDcl)
+
+---
+
 ## 👩‍💻 Author
 
 Swatambra Sahu
